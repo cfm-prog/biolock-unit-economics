@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+
 # BIOLock — Streamlit Dashboard (RU)
 # Три сценария + экспорт/импорт, сезонность, setup-fee в кэше, ролевая вместимость,
 # NRR и точка безубыточности, Монте-Карло и торнадо-чувствительность.
@@ -14,7 +14,14 @@ from dataclasses import dataclass, asdict
 from typing import List, Dict, Optional, Literal, Tuple
 import io
 import json
-
+# --- БАЗОВЫЕ ДАННЫЕ ДЛЯ ТЕСТА ---
+tariffs = ["Academic", "Basic", "Business"]
+segments = ["SMB Pharma/CRO", "Enterprise/Regulator"]
+base_price = 25000       # средний ARPU, ₽/мес
+base_customers = 20      # старт клиентов
+base_growth = 0.15       # прирост клиентов в месяц
+base_churn = 0.05        # отток клиентов
+months = 36              # горизонт прогноза (мес.)
 # -----------------------------
 # Вспомогательные структуры
 # -----------------------------

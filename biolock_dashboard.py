@@ -239,7 +239,7 @@ def run_forecast(sc: Scenario) -> pd.DataFrame:
         contribution = gross_margin - ad_spend
         ebitda = contribution - sc.costs.fixed_monthly + setup_cash  # setup-fee учитываем как приток в месяц сделки
 
-        # NRR (примерная оценка): существующий MRR после churn / MRR предыдущего месяца
+        # NRR (примерная оценка): существующий  после churn /  предыдущего месяца
         existing_prev = max(prev_revenue, 1e-9)
         nrr = (revenue - new_rev_this_month) / existing_prev if prev_revenue>0 else None
         prev_revenue = revenue
@@ -300,7 +300,7 @@ def monte_carlo(sc: Scenario, runs: int = 200, seed: int = 7) -> pd.DataFrame:
         results.append({
             "Суммарная выручка": float(df["Выручка"].sum()),
             "Суммарная EBITDA": float(df["EBITDA"].sum()),
-            "MRR (последний месяц)": float(df.iloc[-1]["Выручка"]),
+            " (последний месяц)": float(df.iloc[-1]["Выручка"]),
             "Месяцев с прибылью": int((eb > 0).sum()),
             "Первый прибыльный месяц": first_profitable
         })
@@ -441,7 +441,7 @@ with t1:
             varc = st.number_input(f"Перем. издержки/мес — {name}", 0, 5_000_000, vc, 1_000, key=f"var_{name}")
             setup_fee = st.number_input(f"Setup fee (разово) — {name}", 0, 5_000_000, setup, 10_000, key=f"setup_{name}")
             tariffs.append(Tariff(name=name, price_month=price, var_cost_month=varc, setup_fee=setup_fee))
-    st.info("Setup fee учитывается в денежном потоке месяца подключения (не в MRR).")
+    st.info("Setup fee учитывается в денежном потоке месяца подключения (не в ).")
 
 # ===== Сегменты =====
 with t2:
@@ -602,38 +602,53 @@ be_b, be_o, be_p = (
     break_even_month(df_p)
 )
 
-    # График MRR (выручка)
-    fig_mrr = go.Figure()
-    fig_mrr.add_trace(go.Scatter(x=df_b["Месяц"], y=df_b["Выручка"], name=f"MRR — Base (BE={be_b})"))
-    fig_mrr.add_trace(go.Scatter(x=df_o["Месяц"], y=df_o["Выручка"], name=f"MRR — Optimistic (BE={be_o})"))
-    fig_mrr.add_trace(go.Scatter(x=df_p["Месяц"], y=df_p["Выручка"], name=f"MRR — Pessimistic (BE={be_p})"))
-    fig_mrr.update_layout(title="MRR (выручка по месяцам)", xaxis_title="Месяц", yaxis_title="₽/мес")
-    st.plotly_chart(fig_mrr, use_container_width=True)
+# Break-even month (пересечение нуля)
+def break_even_month(df):
+    if "EBITDA" not in df.columns:
+        return None
+    eb = pd.to_numeric(df["EBITDA"], errors="coerce").to_numpy()
+    idx = np.where(eb > 0)[0]
+    return int(idx[0] + 1) if len(idx) > 0 else None
 
-    # График 
-    fig_e = go.Figure()
-    fig_e.add_trace(go.Scatter(x=df_b["Месяц"], y=df_b[""], name=f" — Base (BE={be_b})"))
-    fig_e.add_trace(go.Scatter(x=df_o["Месяц"], y=df_o[""], name=f" — Optimistic (BE={be_o})"))
-    fig_e.add_trace(go.Scatter(x=df_p["Месяц"], y=df_p[""], name=f" — Pessimistic (BE={be_p})"))
-    for x in [be_b, be_o, be_p]:
-        if x:
-            fig_e.add_vline(x=x, line_dash="dash", line_color="#888")
-    fig_e.update_layout(title=" по месяцам (вертикали — break-even)", xaxis_title="Месяц", yaxis_title="₽/мес")
-    st.plotly_chart(fig_e, use_container_width=True)
 
-    # График Активные клиенты
-    fig_c = go.Figure()
-    fig_c.add_trace(go.Scatter(x=df_b["Месяц"], y=df_b["Активные клиенты"], name="Клиенты — Base"))
-    fig_c.add_trace(go.Scatter(x=df_o["Месяц"], y=df_o["Активные клиенты"], name="Клиенты — Optimistic"))
-    fig_c.add_trace(go.Scatter(x=df_p["Месяц"], y=df_p["Активные клиенты"], name="Клиенты — Pessimistic"))
-    fig_c.update_layout(title="Активные клиенты", xaxis_title="Месяц", yaxis_title="Кол-во")
-    st.plotly_chart(fig_c, use_container_width=True)
+be_b, be_o, be_p = (
+    break_even_month(df_b),
+    break_even_month(df_o),
+    break_even_month(df_p)
+)
 
-    # NRR (Base)
-    fig_nrr = go.Figure()
-    fig_nrr.add_trace(go.Scatter(x=df_b["Месяц"], y=df_b["NRR"], name="NRR — Base"))
-    fig_nrr.update_layout(title="NRR по месяцам (оценка)", xaxis_title="Месяц", yaxis_title="NRR")
-    st.plotly_chart(fig_nrr, use_container_width=True)
+# График MRR (выручка)
+fig_mrr = go.Figure()
+fig_mrr.add_trace(go.Scatter(x=df_b["Месяц"], y=df_b["Выручка"], name=f"MRR — Base (BE={be_b})"))
+fig_mrr.add_trace(go.Scatter(x=df_o["Месяц"], y=df_o["Выручка"], name=f"MRR — Optimistic (BE={be_o})"))
+fig_mrr.add_trace(go.Scatter(x=df_p["Месяц"], y=df_p["Выручка"], name=f"MRR — Pessimistic (BE={be_p})"))
+fig_mrr.update_layout(title="MRR (выручка по месяцам)", xaxis_title="Месяц", yaxis_title="₽/мес")
+st.plotly_chart(fig_mrr, use_container_width=True)
+
+# График EBITDA
+fig_e = go.Figure()
+fig_e.add_trace(go.Scatter(x=df_b["Месяц"], y=df_b["EBITDA"], name=f"EBITDA — Base (BE={be_b})"))
+fig_e.add_trace(go.Scatter(x=df_o["Месяц"], y=df_o["EBITDA"], name=f"EBITDA — Optimistic (BE={be_o})"))
+fig_e.add_trace(go.Scatter(x=df_p["Месяц"], y=df_p["EBITDA"], name=f"EBITDA — Pessimistic (BE={be_p})"))
+for x in [be_b, be_o, be_p]:
+    if x:
+        fig_e.add_vline(x=x, line_dash="dash", line_color="#888")
+fig_e.update_layout(title="EBITDA по месяцам (вертикали — break-even)", xaxis_title="Месяц", yaxis_title="₽/мес")
+st.plotly_chart(fig_e, use_container_width=True)
+
+# График активных клиентов
+fig_c = go.Figure()
+fig_c.add_trace(go.Scatter(x=df_b["Месяц"], y=df_b["Активные клиенты"], name="Клиенты — Base"))
+fig_c.add_trace(go.Scatter(x=df_o["Месяц"], y=df_o["Активные клиенты"], name="Клиенты — Optimistic"))
+fig_c.add_trace(go.Scatter(x=df_p["Месяц"], y=df_p["Активные клиенты"], name="Клиенты — Pessimistic"))
+fig_c.update_layout(title="Активные клиенты", xaxis_title="Месяц", yaxis_title="Кол-во")
+st.plotly_chart(fig_c, use_container_width=True)
+
+# NRR (Base)
+fig_nrr = go.Figure()
+fig_nrr.add_trace(go.Scatter(x=df_b["Месяц"], y=df_b["NRR"], name="NRR — Base"))
+fig_nrr.update_layout(title="NRR по месяцам (оценка)", xaxis_title="Месяц", yaxis_title="NRR")
+st.plotly_chart(fig_nrr, use_container_width=True)
 
     # Монте-Карло
     st.markdown("### Монте-Карло (по Base)")

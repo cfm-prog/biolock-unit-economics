@@ -289,7 +289,7 @@ def monte_carlo(sc: Scenario, runs: int = 200, seed: int = 7) -> pd.DataFrame:
             "Суммарная EBITDA": float(df["EBITDA"].sum()),
             "MRR (последний месяц)": float(df.iloc[-1]["Выручка"]),
             "Месяцев с прибылью": int((df["EBITDA"]>0).sum()),
-            "Первый прибыльный месяц": int(df.index[df["EBITDA"]>0][0])+1 if (df["EBITДА"]>0).any() else None
+            "Первый прибыльный месяц": int([df["EBITDA"]>0][0])+1 if (df["EBITDA"]>0).any() else None
         })
     return pd.DataFrame(results)
 

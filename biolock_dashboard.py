@@ -262,6 +262,7 @@ def run_forecast(sc: Scenario) -> pd.DataFrame:
 def monte_carlo(sc: Scenario, runs: int = 200, seed: int = 7) -> pd.DataFrame:
     rng = np.random.default_rng(seed)
     results = []
+
     for _ in range(runs):
         sc2 = Scenario(
             name=sc.name,
@@ -271,27 +272,41 @@ def monte_carlo(sc: Scenario, runs: int = 200, seed: int = 7) -> pd.DataFrame:
             costs=CostStructure(**asdict(sc.costs)),
             asm=Assumptions(**asdict(sc.asm))
         )
-        # шумим churn, CPA/CPL, spend, скидки, цены
+
+        # Шумим churn, CPA/CPL, spend, скидки, цены
         for s in sc2.segments:
             s.monthly_churn = float(np.clip(rng.normal(s.monthly_churn, 0.005), 0.003, 0.25))
             s.discount_pct = float(np.clip(rng.normal(s.discount_pct, 0.02), 0.0, 0.5))
+
         for t in sc2.tariffs:
-            t.price_month = float(max(0.0, rng.normal(t.price_month, 0.1*t.price_month)))
+            t.price_month = float(max(0.0, rng.normal(t.price_month, 0.1 * t.price_month)))
+
         for c in sc2.channels:
-            c.monthly_spend = float(max(0.0, rng.normal(c.monthly_spend, 0.1*c.monthly_spend)))
+            c.monthly_spend = float(max(0.0, rng.normal(c.monthly_spend, 0.1 * c.monthly_spend)))
             if c.cpa_paid:
-                c.cpa_paid = float(max(1e3, rng.normal(c.cpa_paid, 0.15*c.cpa_paid)))
+                c.cpa_paid = float(max(1e3, rng.normal(c.cpa_paid, 0.15 * c.cpa_paid)))
             if c.cpl:
-                c.cpl = float(max(1e3, rng.normal(c.cpl, 0.15*c.cpl)))
+                c.cpl = float(max(1e3, rng.normal(c.cpl, 0.15 * c.cpl)))
+
+        # Запускаем прогноз
         df = run_forecast(sc2)
+
+        # Безопасное определение первого прибыльного месяца
+        eb = pd.to_numeric(df["EBITDA"], errors="coerce").to_numpy()
+        idx = np.where(eb > 0)[0]
+        first_profitable = int(idx[0] + 1) if len(idx) > 0 else None
+
+        # Сохраняем метрики прогона
         results.append({
             "Суммарная выручка": float(df["Выручка"].sum()),
             "Суммарная EBITDA": float(df["EBITDA"].sum()),
             "MRR (последний месяц)": float(df.iloc[-1]["Выручка"]),
-            "Месяцев с прибылью": int((df["EBITDA"]>0).sum()),
-            "Первый прибыльный месяц": int([df["EBITDA"]>0][0])+1 if (df["EBITDA"]>0).any() else None
+            "Месяцев с прибылью": int((eb > 0).sum()),
+            "Первый прибыльный месяц": first_profitable
         })
+
     return pd.DataFrame(results)
+
 
 # Торнадо-чувствительность (влияние на суммарную EBITDA)
 
@@ -575,7 +590,7 @@ with t5:
 
     # Break-even month (пересечение нуля)
     def break_even_month(df):
-        idx = np.where((df["EBITDA"].values>0))[0]
+        idx = np.where((df[""].values>0))[0]
         return int(idx[0]+1) if len(idx)>0 else None
     be_b, be_o, be_p = break_even_month(df_b), break_even_month(df_o), break_even_month(df_p)
 
@@ -587,15 +602,15 @@ with t5:
     fig_mrr.update_layout(title="MRR (выручка по месяцам)", xaxis_title="Месяц", yaxis_title="₽/мес")
     st.plotly_chart(fig_mrr, use_container_width=True)
 
-    # График EBITDA
+    # График 
     fig_e = go.Figure()
-    fig_e.add_trace(go.Scatter(x=df_b["Месяц"], y=df_b["EBITDA"], name=f"EBITDA — Base (BE={be_b})"))
-    fig_e.add_trace(go.Scatter(x=df_o["Месяц"], y=df_o["EBITDA"], name=f"EBITDA — Optimistic (BE={be_o})"))
-    fig_e.add_trace(go.Scatter(x=df_p["Месяц"], y=df_p["EBITDA"], name=f"EBITDA — Pessimistic (BE={be_p})"))
+    fig_e.add_trace(go.Scatter(x=df_b["Месяц"], y=df_b[""], name=f" — Base (BE={be_b})"))
+    fig_e.add_trace(go.Scatter(x=df_o["Месяц"], y=df_o[""], name=f" — Optimistic (BE={be_o})"))
+    fig_e.add_trace(go.Scatter(x=df_p["Месяц"], y=df_p[""], name=f" — Pessimistic (BE={be_p})"))
     for x in [be_b, be_o, be_p]:
         if x:
             fig_e.add_vline(x=x, line_dash="dash", line_color="#888")
-    fig_e.update_layout(title="EBITDA по месяцам (вертикали — break-even)", xaxis_title="Месяц", yaxis_title="₽/мес")
+    fig_e.update_layout(title=" по месяцам (вертикали — break-even)", xaxis_title="Месяц", yaxis_title="₽/мес")
     st.plotly_chart(fig_e, use_container_width=True)
 
     # График Активные клиенты

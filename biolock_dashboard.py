@@ -588,11 +588,19 @@ with t5:
     df_o = run_forecast(opt)
     df_p = run_forecast(pes)
 
-    # Break-even month (пересечение нуля)
-    def break_even_month(df):
-        idx = np.where((df[""].values>0))[0]
-        return int(idx[0]+1) if len(idx)>0 else None
-    be_b, be_o, be_p = break_even_month(df_b), break_even_month(df_o), break_even_month(df_p)
+# Break-even month (пересечение нуля)
+def break_even_month(df):
+    if "EBITDA" not in df.columns:
+        return None
+    eb = pd.to_numeric(df["EBITDA"], errors="coerce").to_numpy()
+    idx = np.where(eb > 0)[0]
+    return int(idx[0] + 1) if len(idx) > 0 else None
+
+be_b, be_o, be_p = (
+    break_even_month(df_b),
+    break_even_month(df_o),
+    break_even_month(df_p)
+)
 
     # График MRR (выручка)
     fig_mrr = go.Figure()

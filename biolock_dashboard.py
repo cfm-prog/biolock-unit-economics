@@ -650,35 +650,35 @@ fig_nrr.add_trace(go.Scatter(x=df_b["Месяц"], y=df_b["NRR"], name="NRR — 
 fig_nrr.update_layout(title="NRR по месяцам (оценка)", xaxis_title="Месяц", yaxis_title="NRR")
 st.plotly_chart(fig_nrr, use_container_width=True)
 
-    # Монте-Карло
-    st.markdown("### Монте-Карло (по Base)")
-    n_runs = st.slider("Число прогонов", 50, 1000, 200, 50)
-    if st.button("Запустить Монте-Карло"):
-        dist = monte_carlo(base, runs=n_runs)
-        colA, colB = st.columns(2)
-        with colA:
-            fig_hist = px.histogram(dist, x="Суммарная EBITDA", nbins=30, title="Распределение: суммарная EBITDA")
-            st.plotly_chart(fig_hist, use_container_width=True)
-        with colB:
-            q = dist.quantile([0.1, 0.5, 0.9])
-            st.write("Квантили (0.1 / 0.5 / 0.9):")
-            st.dataframe(q)
+# Монте-Карло
+st.markdown("### Монте-Карло (по Base)")
+n_runs = st.slider("Число прогонов", 50, 1000, 200, 50)
+if st.button("Запустить Монте-Карло"):
+    dist = monte_carlo(base, runs=n_runs)
+    colA, colB = st.columns(2)
+    with colA:
+        fig_hist = px.histogram(dist, x="Суммарная EBITDA", nbins=30, title="Распределение: суммарная EBITDA")
+        st.plotly_chart(fig_hist, use_container_width=True)
+    with colB:
+        q = dist.quantile([0.1, 0.5, 0.9])
+        st.write("Квантили (0.1 / 0.5 / 0.9):")
+        st.dataframe(q)
 
-    # Торнадо-чувствительность
-    st.markdown("### Чувствительность (торнадо)")
-    deltas = {
-        'price': st.slider("Δ Цена, %", 0.01, 0.50, 0.20, 0.01),
-        'churn': st.slider("Δ Churn, %", 0.01, 0.50, 0.20, 0.01),
-        'cac': st.slider("Δ CAC, %", 0.01, 0.50, 0.20, 0.01),
-        'fixed': st.slider("Δ Fixed, %", 0.01, 0.50, 0.20, 0.01),
-    }
-    if st.button("Построить торнадо"):
-        # конвертируем проценты в множители
-        d = {k: float(v) for k,v in deltas.items()}
-        df_t = tornado_sensitivity(base, df_b, d)
-        fig_t = go.Figure(go.Bar(x=df_t["Δ EBITDA"], y=df_t["Параметр"], orientation='h'))
-        fig_t.update_layout(title="Вклад параметров в отклонение EBITDA (торнадо)", xaxis_title="Δ EBITDA (₽)", yaxis_title="Параметр")
-        st.plotly_chart(fig_t, use_container_width=True)
+# Торнадо-чувствительность
+st.markdown("### Чувствительность (торнадо)")
+deltas = {
+    'price': st.slider("Δ Цена, %", 0.01, 0.50, 0.20, 0.01),
+    'churn': st.slider("Δ Churn, %", 0.01, 0.50, 0.20, 0.01),
+    'cac': st.slider("Δ CAC, %", 0.01, 0.50, 0.20, 0.01),
+    'fixed': st.slider("Δ Fixed, %", 0.01, 0.50, 0.20, 0.01),
+}
+if st.button("Построить торнадо"):
+    # конвертируем проценты в множители
+    d = {k: float(v) for k,v in deltas.items()}
+    df_t = tornado_sensitivity(base, df_b, d)
+    fig_t = go.Figure(go.Bar(x=df_t["Δ EBITDA"], y=df_t["Параметр"], orientation='h'))
+    fig_t.update_layout(title="Вклад параметров в отклонение EBITDA (торнадо)", xaxis_title="Δ EBITDA (₽)", yaxis_title="Параметр")
+    st.plotly_chart(fig_t, use_container_width=True)
 
 # ===== Экспорт / импорт =====
 with t6:
